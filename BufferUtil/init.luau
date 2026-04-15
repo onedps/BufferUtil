@@ -12,6 +12,9 @@ local readu8 = buffer.readu8
 local readf64 = buffer.readf64
 local readf32 = buffer.readf32
 
+local writebits = buffer.writebits
+local readbits = buffer.readbits
+
 local SIZE_8 = 1
 local SIZE_32 = 4
 local SIZE_64 = 8
