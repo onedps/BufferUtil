@@ -30,6 +30,10 @@ local quantize_angle = function(rad: number): number
 	return math.floor((a + PI) / TAU * MAX_U16 + 0.5)
 end
 
+local unquantize_angle = function(output: number): number
+	return (output / 0xFFFF) * TAU - PI
+end
+
 local data_types = {}
 
 data_types.Vector3 = {
@@ -66,16 +70,7 @@ data_types.CFrame = {
 	
 	Read = function(buf: buffer, offset: number): CFrame
 		local cframe = cframe_new(readf32(buf, offset), readf32(buf, offset + 4), readf32(buf, offset + 8))
-		
-		local qx = readu16(buf, offset + 12)
-		local qy = readu16(buf, offset + 14)
-		local qz = readu16(buf, offset + 16)
-
-		local angles = cframe_fromxyz(
-			(qx / 0xFFFF) * TAU - PI,
-			(qy / 0xFFFF) * TAU - PI,
-			(qz / 0xFFFF) * TAU - PI
-		)
+		local angles = cframe_fromxyz(unquantize_angle(readu16(buf, offset + 12)), unquantize_angle(readu16(buf, offset + 14)), unquantize_angle(readu16(buf, offset + 16)))
 
 		return cframe * angles
 	end
