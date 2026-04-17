@@ -9,12 +9,6 @@ local writeu16 = buffer.writeu16
 local readf32 = buffer.readf32
 local readu16 = buffer.readu16
 
-local vector3_new = Vector3.new
-
-local cframe_new = CFrame.new
-local cframe_fromxyz = CFrame.fromEulerAnglesXYZ
-local cframe_toxyz = CFrame.new().ToEulerAnglesXYZ
-
 local PI = math.pi
 local TAU = math.tau
 
@@ -48,7 +42,7 @@ data_types.Vector3 = {
 	end,
 	
 	Read = function(buf: buffer, offset: number): Vector3
-		return vector3_new(readf32(buf, offset), readf32(buf, offset + 4), readf32(buf, offset + 8))
+		return Vector3.new(readf32(buf, offset), readf32(buf, offset + 4), readf32(buf, offset + 8))
 	end
 }
 
@@ -56,7 +50,7 @@ data_types.CFrame = {
 	Write = function(buf: buffer, offset: number, value: CFrame): buffer
 		buf = buf or create(CFRAME_SIZE)
 
-		local x, y, z = cframe_toxyz(value)
+		local x, y, z = value:ToEulerAnglesXYZ()
 
 		writef32(buf, offset, value.X)
 		writef32(buf, offset + 4, value.Y)
@@ -69,8 +63,8 @@ data_types.CFrame = {
 	end,
 	
 	Read = function(buf: buffer, offset: number): CFrame
-		local cframe = cframe_new(readf32(buf, offset), readf32(buf, offset + 4), readf32(buf, offset + 8))
-		local angles = cframe_fromxyz(unquantize_angle(readu16(buf, offset + 12)), unquantize_angle(readu16(buf, offset + 14)), unquantize_angle(readu16(buf, offset + 16)))
+		local cframe = CFrame.new(readf32(buf, offset), readf32(buf, offset + 4), readf32(buf, offset + 8))
+		local angles = CFrame.fromEulerAnglesXYZ(unquantize_angle(readu16(buf, offset + 12)), unquantize_angle(readu16(buf, offset + 14)), unquantize_angle(readu16(buf, offset + 16)))
 
 		return cframe * angles
 	end
