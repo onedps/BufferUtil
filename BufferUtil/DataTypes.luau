@@ -15,7 +15,7 @@ local PI = math.pi
 local TAU = math.tau
 
 local MAX_U16 = 65535
-local MAX_BUFFER_SIZE = 1000000 -- max for sized buffer
+local MAX_BUFFER_SIZE = 1e6 -- max for sized buffer (1000000)
 
 local quantize_angle = function(rad: number): number
 	local a = rad % TAU
@@ -30,7 +30,6 @@ end
 
 local data_types = {}
 
--- im lazy and i think others are no less, so i code this func to avoid calc size manually
 local CalcSize = function(type: keyof<typeof(data_types)>, value: any)
 	local buf = create(MAX_BUFFER_SIZE)
 	local size = 0

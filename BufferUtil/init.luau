@@ -57,6 +57,7 @@ local GetTypeByIdx = function(idx: number)
 	return 0
 end
 
+-- im lazy and i think others are no less, so i code this func to avoid calc size manually
 local CalcSize = function(type: keyof<typeof(buffer_util)>, value: any)
 	local buf = create(MAX_BUFFER_SIZE)
 	local size = 0
@@ -143,7 +144,12 @@ buffer_util.string = {
 
 buffer_util.table = {
     Write = function(buf: buffer, offset: number, value: {[any]: any})
-		buf = buf or create(CalcSize(typeof(value), value))
+		local value_type = typeof(value)
+		buf = buf or create(CalcSize(value_type, value))
+
+		-- testing writer/reader prototype (1. Read u8 at offset. 2. Get type by index in u8 and read type to offset + 1)
+		writeu8(buf, offset, GetIdx(value_type))
+		offset += 1
 
         for k,v in value do
 			local of_k, of_v = typeof(k), typeof(v)
