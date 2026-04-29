@@ -9,8 +9,6 @@ but this is necessary for optimization and code simplification.
 
 -- TOO MUCH TRASH!!!
 
-local countlz = bit32.countlz
-
 local create = buffer.create
 local buf_len = buffer.len
 local copy = buffer.copy
@@ -143,8 +141,8 @@ buffer_util.string = {
 	end,
 	
 	Read = function(buf: buffer, offset: number): string
-		local count = 
-		return readstring(buf, offset, count)
+		local count = readu8(buf, offset)
+		return readstring(buf, offset + 1, count)
 	end,
 }
 
