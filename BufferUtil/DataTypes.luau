@@ -34,7 +34,7 @@ local CalcSize = function(type: keyof<typeof(data_types)>, value: any)
 	local buf = create(MAX_BUFFER_SIZE)
 	local size = 0
 
-	copy(buf, 0, data_types[type].Write(buf, 0, value), 0)
+	data_types[type].Write(buf, 0, value)
 
 	for i = 0, MAX_BUFFER_SIZE - 1 do
 		size += readu8(buf, i) > 0 and 1 or 0
@@ -46,7 +46,7 @@ end
 -- 12 bytes (3 float32)
 data_types.Vector3 = {
 	Write = function(buf: buffer, offset: number, value: Vector3): buffer
-		buf = buf or create(CalcSize(typeof(value), value))
+		buf = buf or create(CalcSize("Vector3", value))
 
 		writef32(buf, offset, value.X)
 		writef32(buf, offset + 4, value.Y)
@@ -63,7 +63,7 @@ data_types.Vector3 = {
 -- 18 bytes (Vector3 - 12 bytes, 3 unsigned16 - 6 bytes)
 data_types.CFrame = {
 	Write = function(buf: buffer, offset: number, value: CFrame): buffer
-		buf = buf or create(CalcSize(typeof(value), value))
+		buf = buf or create(CalcSize("CFrame", value))
 
 		local x, y, z = value:ToEulerAnglesXYZ()
 

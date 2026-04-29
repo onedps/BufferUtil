@@ -9,6 +9,8 @@ but this is necessary for optimization and code simplification.
 
 -- TOO MUCH TRASH!!!
 
+local countlz = bit32.countlz
+
 local create = buffer.create
 local buf_len = buffer.len
 local copy = buffer.copy
@@ -38,7 +40,7 @@ local data_types = require("@self/DataTypes")
 local buffer_util = {}
 buffer_util = setmetatable(buffer_util, {__index = data_types})
 
-local GetIdx = function(type: keyof<typeof(buffer_util)>)
+local GetIdx = function(type: keyof<typeof(buffer_util)>): number
 	local idx = 0
 
 	for k,v in pairs(buffer_util) do
@@ -49,7 +51,7 @@ local GetIdx = function(type: keyof<typeof(buffer_util)>)
 	return 0
 end
 
-local GetTypeByIdx = function(idx: number)
+local GetTypeByIdx = function(idx: number): string
 	for k,v in pairs(buffer_util) do
 		if GetIdx(k) == idx then return k end
 	end
@@ -58,11 +60,11 @@ local GetTypeByIdx = function(idx: number)
 end
 
 -- im lazy and i think others are no less, so i code this func to avoid calc size manually
-local CalcSize = function(type: keyof<typeof(buffer_util)>, value: any)
+local CalcSize = function(type: keyof<typeof(buffer_util)>, value: any): number
 	local buf = create(MAX_BUFFER_SIZE)
 	local size = 0
 
-	copy(buf, 0, buffer_util[type].Write(buf, 0, value), 0)
+	buffer_util[type].Write(buf, 0, value)
 
 	for i = 0, MAX_BUFFER_SIZE - 1 do
 		size += readu8(buf, i) > 0 and 1 or 0
@@ -72,7 +74,7 @@ local CalcSize = function(type: keyof<typeof(buffer_util)>, value: any)
 end
 
 -- #tbl throw error or 0 with only index tbl (maps)
-local GetTableLenght = function(tbl: {[any]: any})
+local GetTableLenght = function(tbl: {[any]: any}): number
 	local len = 0
 
 	for k,v in tbl do
@@ -132,12 +134,16 @@ buffer_util.boolean = {
 
 buffer_util.string = {
 	Write = function(buf: buffer, offset: number, value: string): buffer
-		if buf == buf then writestring(buf, offset, value) else buf = fromstring(value) end
+		buf = buf or create(CalcSize("string", value))
+
+		writeu8(buf, offset, #value)
+		writestring(buf, offset + 1, value) 
 
 		return buf
 	end,
 	
-	Read = function(buf: buffer, offset: number, count: number): string
+	Read = function(buf: buffer, offset: number): string
+		local count = 
 		return readstring(buf, offset, count)
 	end,
 }
@@ -146,10 +152,6 @@ buffer_util.table = {
     Write = function(buf: buffer, offset: number, value: {[any]: any})
 		local value_type = typeof(value)
 		buf = buf or create(CalcSize(value_type, value))
-
-		-- testing writer/reader prototype (1. Read u8 at offset. 2. Get type by index in u8 and read type to offset + 1)
-		writeu8(buf, offset, GetIdx(value_type))
-		offset += 1
 
         for k,v in value do
 			local of_k, of_v = typeof(k), typeof(v)
@@ -169,18 +171,25 @@ buffer_util.table = {
     end,
 
     Read = function(buf: buffer, offset: number)
-        local tbl = {}
+		local tbl = {}
 
-		for i = offset, buf_len(buf) do
-			for k = 0, 4 - 1 do
+		while offset < #buf do
+			local of_k = GetTypeFromIdx(readu8(buf, offset))
+			offset += 1
 
-			end
-			local type_k = GetTypeByIdx(readu8(buf, offset + i))
-			buffer_util[type_k].Read(buf, offset + i + 1)
+			local k = buffer_util[of_k].Read(buf, offset)
+			offset += CalcSize(of_k, k)
 
-			local type_v = GetTypeByIdx(readu8(buf, offset + i + CalcSize(typeof(buffer_util[type_k]))))
-			buffer_util[type_v].Read(buf, offset + i + 3)
+			local of_v = GetTypeFromIdx(readu8(buf, offset))
+			offset += 1
+
+			local v = buffer_util[of_v].Read(buf, offset)
+			offset += CalcSize(of_v, v)
+
+			tbl[k] = v
 		end
+
+		return tbl
     end,
 }
 
