@@ -3,7 +3,9 @@
 --!strict
 
 local create = buffer.create
+local copy = buffer.copy
 
+local readu8 = buffer.readu8
 local writef32 = buffer.writef32
 local writeu16 = buffer.writeu16
 local readf32 = buffer.readf32
@@ -12,10 +14,8 @@ local readu16 = buffer.readu16
 local PI = math.pi
 local TAU = math.tau
 
-local VECTOR3_SIZE = 12
-local CFRAME_SIZE = 18
-
 local MAX_U16 = 65535
+local MAX_BUFFER_SIZE = 1e6 -- max for sized buffer (1000000)
 
 local quantize_angle = function(rad: number): number
 	local a = rad % TAU
@@ -30,9 +30,23 @@ end
 
 local data_types = {}
 
+local CalcSize = function(type: keyof<typeof(data_types)>, value: any)
+	local buf = create(MAX_BUFFER_SIZE)
+	local size = 0
+
+	data_types[type].Write(buf, 0, value)
+
+	for i = 0, MAX_BUFFER_SIZE - 1 do
+		size += readu8(buf, i) > 0 and 1 or 0
+	end
+
+	return size
+end
+
+-- 12 bytes (3 float32)
 data_types.Vector3 = {
 	Write = function(buf: buffer, offset: number, value: Vector3): buffer
-		buf = buf or create(VECTOR3_SIZE)
+		buf = buf or create(CalcSize("Vector3", value))
 
 		writef32(buf, offset, value.X)
 		writef32(buf, offset + 4, value.Y)
@@ -43,12 +57,13 @@ data_types.Vector3 = {
 	
 	Read = function(buf: buffer, offset: number): Vector3
 		return Vector3.new(readf32(buf, offset), readf32(buf, offset + 4), readf32(buf, offset + 8))
-	end
+	end,
 }
 
+-- 18 bytes (Vector3 - 12 bytes, 3 unsigned16 - 6 bytes)
 data_types.CFrame = {
 	Write = function(buf: buffer, offset: number, value: CFrame): buffer
-		buf = buf or create(CFRAME_SIZE)
+		buf = buf or create(CalcSize("CFrame", value))
 
 		local x, y, z = value:ToEulerAnglesXYZ()
 
@@ -67,7 +82,7 @@ data_types.CFrame = {
 		local angles = CFrame.fromEulerAnglesXYZ(unquantize_angle(readu16(buf, offset + 12)), unquantize_angle(readu16(buf, offset + 14)), unquantize_angle(readu16(buf, offset + 16)))
 
 		return cframe * angles
-	end
+	end,
 }
 
 return data_types
